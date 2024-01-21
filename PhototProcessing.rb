@@ -41,6 +41,7 @@ end
 
 
 def enumerate_folder(folderpath, files_hash_array)
+    count = 0
     Dir.entries(folderpath).each  { |f|
         if (f != ".") && (f != "..") && (f != ".DS_Store")
             fullpath = File.join(folderpath, f)
@@ -48,15 +49,15 @@ def enumerate_folder(folderpath, files_hash_array)
                 h = prepare_file_hash(fullpath)
                 if h != nil
                     files_hash_array << h
+                    count = count + 1
                 end
             end
             if File.directory? fullpath
-                enumerate_folder(fullpath, files_hash_array)
+                count = count + enumerate_folder(fullpath, files_hash_array)
             end
         end
     }
-
-
+    return count
 end
 
 
@@ -79,7 +80,7 @@ end
 
 
 def process_single_filehash(folder, file_hash)
-    print "processing "+file_hash[:path]+" ... "
+    print " processing "+file_hash[:path]+" ... "
     $stdout.flush
     test_path = File.join(folder, file_hash[:filename])
     if File.exist? test_path
@@ -131,14 +132,21 @@ def prepare_files(files, folders)
 end
 
 
-def process_folders(folders, dst_folder)
+def process_folders(folders, dst_folder, count)
+    number = 1
     folders.each {|folder, files|
         dst = File.join(dst_folder, folder)
         if !Dir.exist? dst
             FileUtils.mkdir_p dst
         end
         files.each { |fh|
+            #puts "number = "+number.to_s+" count = "+count.to_s
+            percent = (number.to_f*100.0)/count.to_f
+            percent_str = "#{format("%.2f", percent)}"
+            print " [ "+percent_str+"% ] "
+            $stdout.flush
             process_single_filehash(dst, fh)
+            number = number + 1
         }
     }
 end
@@ -149,20 +157,23 @@ files_hash_array = []
 result_files = {}
 
 
-src_folder = "/Volumes/SSD_STORAGE/TEST/INPUT"
-dst_folder = "/Volumes/SSD_STORAGE/TEST/OUTPUT"
+src_folder = "/Volumes/SSD_STORAGE/MEDIA/INPUT"
+dst_folder = "/Volumes/SSD_STORAGE/MEDIA/OUTPUT"
+
+#src_folder = "/Volumes/SSD_STORAGE/TEST/INPUT"
+#dst_folder = "/Volumes/SSD_STORAGE/TEST/OUTPUT"
 
 #src_folder = "/Volumes/SSD_STORAGE/TMP/PHOTOS.NEW.cr"
 
-enumerate_folder(src_folder, files_hash_array)
+count = enumerate_folder(src_folder, files_hash_array)
 
 prepare_files(files_hash_array, result_files)
 
 
-puts "\nINPUT:\n"
-puts JSON.pretty_generate(files_hash_array)
+#puts "\nINPUT:\n"
+#puts JSON.pretty_generate(files_hash_array)
 
-puts "\nOUTPUT:\n"
-puts JSON.pretty_generate(result_files)
+#puts "\nOUTPUT:\n"
+#puts JSON.pretty_generate(result_files)
 
-process_folders(result_files, dst_folder)
+process_folders(result_files, dst_folder, count)
